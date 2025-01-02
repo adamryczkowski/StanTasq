@@ -1,0 +1,61 @@
+= Stan task scheduler
+== How does it all work?
+
+For the worker to work, it needs:
+
+1. Running backend storage server: NATS
+2. One or more workers running: `taskiq worker`
+3. A driver that requests the tasks (e.g. unit test)
+
+== NAT server
+
+To get the NATS server running, install it with
+
+```bash
+curl -sf https://binaries.nats.dev/nats-io/nats-server/v2@latest | sh
+```
+
+Put the following configuration into a file, e.g. `~/.config/nats/nats-config.conf`:
+
+```
+listen: 0.0.0.0:4222
+authorization: {
+    token: "szakal"
+}
+jetstream {
+    # Jetstream storage location, limits and encryption
+    store_dir: "/home/Adama-docs/nats"
+
+    # 1GB
+    max_memory_store: 1073741824
+
+    # 10GB
+    max_file_store: 10737418240
+}
+```
+
+Obviously, the token should be a little more secure.
+
+Then run the server with:
+
+```bash
+nats-server --config ~/.config/nats/nats-config.conf
+```
+
+== Taskiq broker
+
+Taskiq workers are driven by the `taskiq` command. To get it working, install the current repository with `poetry install` or `pip install .`.
+
+Then enter its environment (e.g. `poetry shell` or `. vevn/bin/activate`).
+
+Once there, a `taskiq` command will be available. To run a broker capable of running all the workers defined in the project, run:
+
+```bash
+worker StanTasq:broker
+```
+
+Broker will find the tasks, because each task is decorated with the `@broker` decorator, and loaded on project's startup in `__init__.py`.
+
+== Taskiq driver
+
+Simply run the `tests/test_basic.py` defined in the project.
