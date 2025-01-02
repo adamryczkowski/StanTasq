@@ -15,7 +15,7 @@ result_backend = NATSObjectStoreResultBackend(
     serializer=JSONSerializer(),
 )
 broker = PullBasedJetStreamBroker(
-    servers="localhost", stream_name="stan_tasks", token="szakal"
+    servers="localhost", stream_name="stan_tasks", token="szakal", subject="stan_tasks"
 ).with_result_backend(
     result_backend=result_backend,
 )
