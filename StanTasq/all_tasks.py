@@ -5,9 +5,9 @@ from nats.aio.msg import Msg
 from nats.js import JetStreamContext
 from taskiq.result import TaskiqResult
 from taskiq.task import AsyncTaskiqTask
+from taskiq.exceptions import ResultGetError
 from tqdm import tqdm
 from taskiq_nats.result_backend import NATSObjectStoreResultBackend
-
 
 from .broker import broker
 
@@ -35,6 +35,7 @@ class TaskWrapper:
         self._name = task_name
         self._args = args
         self._kwargs = kwargs
+        self._result = None
 
     @property
     def task(self) -> AsyncTaskiqTask:
@@ -74,13 +75,26 @@ class TaskWrapper:
         result_backend: NATSObjectStoreResultBackend = broker.result_backend
         await result_backend.object_store.delete(self._task.task_id)
 
+    async def wait_result(self, timeout: int = 10) -> TaskiqResult:
+        if self._result is None:
+            try:
+                self._result = await self._task.wait_result(
+                    timeout=timeout, with_logs=True
+                )
+            except ResultGetError:
+                self._result = None
+        return self._result
+
     async def get_result(self) -> TaskiqResult:
         if self._result is None:
-            self._result = await self._task.get_result(with_logs=True)
+            try:
+                self._result = await self._task.get_result(with_logs=True)
+            except ResultGetError:
+                self._result = None
         return self._result
 
     def __repr__(self) -> str:
-        args = ", ".join(self._args)
+        args = ", ".join([str(a) for a in self._args])
         kwargs = ", ".join([f"{key}={value}" for key, value in self._kwargs.items()])
         args_str = "("
         if len(kwargs) > 0:
@@ -89,9 +103,9 @@ class TaskWrapper:
             args_str += f"{args}"
         args_str += ")"
         if self._result is None:
-            ans = f"Task: {self._name}{args_str} scheduled at {self.timestamp.strftime("%a, %m.%b.%Y %H:%M:%S")}"
+            ans = f"{self.task_id}: {self._name}{args_str} scheduled {humanize.naturaltime(dt.datetime.now() - self.timestamp)}"  # .strftime("%a, %m.%b.%Y %H:%M:%S")
         else:
-            ans = f"Task: {self._name}{args_str}->{self._result.return_value} executed at {self.timestamp.strftime("%a, %m.%b.%Y %H:%M:%S")} for {humanize.naturaldelta(dt.timedelta(seconds=self._result.execution_time))}"
+            ans = f"{self.task_id}: {self._name}{args_str}->{self._result.return_value} executed {humanize.naturaltime(dt.datetime.now() - self.timestamp)} for {humanize.naturaldelta(dt.timedelta(seconds=self._result.execution_time))}"
         return ans
 
 
@@ -109,7 +123,8 @@ class AllTasks:
         self._all_tasks = {}
         with tqdm(total=count, desc="Loading tasks") as pbar:
             while count > 0:
-                msg = await sub.fetch(1)[0]
+                msg = await sub.fetch(1)
+                msg = msg[0]
                 count -= 1
                 data = broker.serializer.loadb(msg.data)
                 taskw = TaskWrapper(
@@ -126,8 +141,11 @@ class AllTasks:
     def __repr__(self) -> str:
         ans_list = []
         for task in self._all_tasks.values():
-            ans_list.append(f"{task.task_id}: {repr(task)}")
+            ans_list.append(repr(task))
         return "\n".join(ans_list)
+
+    def get_task(self, task_id: str) -> TaskWrapper:
+        return self._all_tasks[task_id]
 
     async def delete_tasks_older_than(
         self, interval: dt.timedelta = dt.timedelta(days=7)
@@ -138,7 +156,8 @@ class AllTasks:
                 del self._all_tasks[task.task_id]
 
     async def clear_all_tasks(self):
-        """VERY DANGEROUS! Deletes all messages and results without any confirmation and possibility to restore."""
+        """VERY DANGEROUS! Deletes all messages and results without any confirmation and possibility to restore.
+        Moreover, all workers should be restarted after calling this method, otherwise they will not pick new tasks."""
         await broker.js.delete_stream(broker.stream_name)
         result_backend: NATSObjectStoreResultBackend = broker.result_backend
-        await broker.js.delete_object_store(result_backend.object_store.name)
+        await broker.js.delete_object_store(result_backend.bucket_name)
