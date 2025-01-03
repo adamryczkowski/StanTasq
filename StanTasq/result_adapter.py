@@ -173,7 +173,7 @@ class InferenceResult(ILocalInferenceResult):
         elif self.result_type == StanResultEngine.MCMC:
             if onedim_parameter_name is not None:
                 s = self._result.summary()
-                return s["N_Eff"][onedim_parameter_name]
+                return s["ESS_bulk"][onedim_parameter_name]
             else:
                 return self.draws(False).shape[0]
         elif self.result_type == StanResultEngine.PATHFINDER:

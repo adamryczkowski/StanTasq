@@ -560,6 +560,10 @@ class ILocalInferenceResult(IInferenceResult):
         else:
             return f"Run taken: {humanize.precisedelta(self._runtime)}"
 
+    @property
+    @abstractmethod
+    def runtime(self) -> timedelta | None: ...
+
     def __repr__(self):
         if self.sample_count is None:
             return self.repr_without_sampling_errors()

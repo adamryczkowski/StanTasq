@@ -13,7 +13,7 @@ import cmdstanpy
 import numpy as np
 
 from .ifaces import StanOutputScope
-from .calc_hash import calc_hash, make_dict_serializable_in_place
+from .calc_hash import calc_inthash, make_dict_serializable_in_place
 import base64
 
 
@@ -40,7 +40,7 @@ def find_model_in_cache(
                 model_code = f.read()
             if (
                 base64.b64encode(
-                    abs(calc_hash(model_code)).to_bytes(32, byteorder="big")
+                    abs(calc_inthash(model_code.encode())).to_bytes(32, byteorder="big")
                 ).decode("utf-8")
                 == model_id
             ):
