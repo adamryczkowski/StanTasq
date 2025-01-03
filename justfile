@@ -33,3 +33,9 @@ run:
   #!/usr/bin/env bash
   set -euo pipefail
   poetry run python -m run_server
+
+
+test:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  poetry run pytest

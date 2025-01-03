@@ -339,13 +339,14 @@ class InferenceResult(ILocalInferenceResult):
 
             return serialize_to_bytes({"draws": ans_dict}, "pickle")
         if output_scope == StanOutputScope.RawOutput:
-            file = self.serialize()
+            # TODO:
+            assert False
             # Encode file as base64
-            with open(file, "rb") as f:
-                data = f.read()
-                ans_dict["zip"] = data
-
-            return serialize_to_bytes({"raw": ans_dict}, "pickle")
+            # with open(file, "rb") as f:
+            #     data = f.read()
+            #     ans_dict["zip"] = data
+            #
+            # return serialize_to_bytes({"raw": ans_dict}, "pickle")
 
         raise ValueError("Unknown output type")
 
@@ -355,7 +356,7 @@ class InferenceResult(ILocalInferenceResult):
     #     return json.dumps(self.serialize(output_type))
 
     @overrides
-    def serialize(self, output_scope: StanOutputScope) -> bytes:  # noqa: F811
+    def serialize_to_file(self, output_scope: StanOutputScope) -> Path:
         """Serializes the method into a single file that is readable."""
         try:
             rs: RunSet = self._result.runset

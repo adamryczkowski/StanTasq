@@ -63,9 +63,9 @@ Simply run the `tests/test_basic.py` defined in the project.
 
 == TODO:
 
-1. Test the task creation without the worker and without awaiting the result.
- . Check if AllTasks correctly handles the task.
- . See if the task can be picked up and executed by the worker when the worker gets started.
- . Test again if AllTasks correctly handles the - now finished - task.
-2. Try the https://github.com/nats-nui/nui
-3. Get the Stan task runner working
+. Test reading the model from the model cache.
+. Make the stan a proper task, that can be scheduled.
+. Add functionality to search for the result in "AllTasks" based on the request cache.
+. Test `just test` recipe.
+. Implement serialization as the RAW scope.
+. Rename serialized model files to have a proper extension. Bin? Obj? Zip?

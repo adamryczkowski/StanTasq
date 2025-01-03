@@ -361,6 +361,9 @@ class ILocalInferenceResult(IInferenceResult):
     @abstractmethod
     def serialize(self, output_scope: StanOutputScope) -> bytes: ...
 
+    @abstractmethod
+    def serialize_to_file(self, output_scope: StanOutputScope) -> Path: ...
+
     @property
     def user_parameters(self) -> list[str]:
         self._make_dict()

@@ -1,7 +1,6 @@
 from pathlib import Path
-import json
 
-from StanTasq import CmdStanRunner
+from StanTasq import CmdStanRunner, StanOutputScope
 
 
 def model() -> str:
@@ -47,7 +46,10 @@ def test1():
     result = runner.sampling(iter_sampling=1000, num_chains=8)
     # print(messages)
     print(result)
-    json.dump(result, open("result.json", "w"))
+    print(result.serialize(output_scope=StanOutputScope.MainEffects))
+    print(result.serialize(output_scope=StanOutputScope.Covariances))
+    print(result.serialize(output_scope=StanOutputScope.FullSamples))
+    # print(result.serialize(output_scope=StanOutputScope.RawOutput))
 
 
 if __name__ == "__main__":

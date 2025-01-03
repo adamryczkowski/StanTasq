@@ -113,3 +113,19 @@ def test_infer_param_shapes_10():
         pass
     else:
         assert False
+
+
+if __name__ == "__main__":
+    test_infer_param_shapes_0()
+    test_infer_param_shapes_1()
+    test_infer_param_shapes_2()
+    test_infer_param_shapes_3()
+    test_infer_param_shapes_3b()
+    test_infer_param_shapes_4()
+    test_infer_param_shapes_5()
+    test_infer_param_shapes_6()
+    test_infer_param_shapes_7()
+    test_infer_param_shapes_8()
+    test_infer_param_shapes_9()
+    test_infer_param_shapes_10()
+    print("infer_param_shapes tests passed")

@@ -11,6 +11,8 @@ data/*.json
 data/audio/*.wav
 data/audio/user
 
+tests/model_cache
+
 config.json
 
 # Distribution / packaging
