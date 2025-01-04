@@ -19,6 +19,7 @@ valuewitherror = {path = "/home/adam/Documents/praca/TrainerEngine/lib/ValueWith
 humanize = "^4.11.0"
 prettytable = "^3.12.0"
 tqdm = "^4.67.1"
+pytest-asyncio = "^0.25.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.3.4"
@@ -30,3 +31,6 @@ build-backend = "poetry.core.masonry.api"
 
 #[tool.poetry.scripts]
 #run-server = "mikapi:app.run"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

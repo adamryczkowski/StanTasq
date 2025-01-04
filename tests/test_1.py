@@ -118,7 +118,7 @@ def model_generator_array(
 #     stan_file="/home/Adama-docs/Adam/MyDocs/praca/TrainerEngine/lib/stan_runner/tests/model_cache/cov_model.stan", cpp_options={'STAN_THREADS':'true'})
 
 
-def test_model(model_code: str, data: dict[str, str]):
+def build_model(model_code: str, data: dict[str, str]):
     # model_cache_dir should be an absolute string of the model_cache directory in the project's folder.
     model_cache_dir = Path(__file__).parent / "model_cache"
 
@@ -145,31 +145,31 @@ def test_model(model_code: str, data: dict[str, str]):
 
 
 def test1():
-    test_model(*model_generator_array([1], 1, True))
+    build_model(*model_generator_array([1], 1, True))
 
 
 def test2():
-    test_model(*model_generator_array([2], 1, True))
+    build_model(*model_generator_array([2], 1, True))
 
 
 def test3():
-    test_model(*model_generator_array([2, 3], 2, True))
+    build_model(*model_generator_array([2, 3], 2, True))
 
 
 def test4():
-    test_model(*model_generator_array([2, 3, 4], 2, True))
+    build_model(*model_generator_array([2, 3, 4], 2, True))
 
 
 def test7():
-    test_model(*model_generator_array([2, 3, 4, 2], 2, True))
+    build_model(*model_generator_array([2, 3, 4, 2], 2, True))
 
 
 def test5():
-    test_model(*model_generator_array([2, 3, 4], 1, True))
+    build_model(*model_generator_array([2, 3, 4], 1, True))
 
 
 def test6():
-    test_model(*model_generator_array([2, 3, 4], 0, True))
+    build_model(*model_generator_array([2, 3, 4], 0, True))
 
 
 if __name__ == "__main__":

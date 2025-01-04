@@ -3,11 +3,11 @@ import datetime as dt
 import humanize
 from nats.aio.msg import Msg
 from nats.js import JetStreamContext
+from taskiq.exceptions import ResultGetError
 from taskiq.result import TaskiqResult
 from taskiq.task import AsyncTaskiqTask
-from taskiq.exceptions import ResultGetError
-from tqdm import tqdm
 from taskiq_nats.result_backend import NATSObjectStoreResultBackend
+from tqdm import tqdm
 
 from .broker import broker
 
@@ -161,3 +161,6 @@ class AllTasks:
         await broker.js.delete_stream(broker.stream_name)
         result_backend: NATSObjectStoreResultBackend = broker.result_backend
         await broker.js.delete_object_store(result_backend.bucket_name)
+
+
+all_tasks: AllTasks = AllTasks()

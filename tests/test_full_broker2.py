@@ -1,11 +1,11 @@
+import asyncio
+
 from taskiq import AsyncTaskiqTask
 
-from StanTasq import AllTasks, broker, MyTask
-import asyncio
+from StanTasq import broker, MyTask, all_tasks, init
 
 
 async def clear_all():
-    all_tasks = AllTasks()
     await all_tasks.startup()
     print("Deleting all tasks:")
     print(all_tasks)
@@ -17,7 +17,6 @@ async def clear_all():
 async def test_clear():
     await clear_all()
     get_task: AsyncTaskiqTask = await MyTask.add_one.kiq(10)
-    all_tasks = AllTasks()
     await all_tasks.startup()
     task = all_tasks.get_task(get_task.task_id)
     print(task)
@@ -29,7 +28,7 @@ async def test_clear():
 
 
 async def all_tests():
-    await broker.startup()
+    await init()
     await test_clear()
 
 
