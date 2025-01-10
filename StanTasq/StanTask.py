@@ -3,7 +3,7 @@ from taskiq import Context, TaskiqDepends
 from typing import Annotated, Any, Optional
 from pathlib import Path
 from .cmdstan_runner import CmdStanRunner, InferenceResult
-from .ifaces import StanResultEngine
+from .ifaces import StanResultEngine, StanOutputScope
 import datetime as dt
 
 
@@ -13,6 +13,8 @@ async def compute_model(
     data: dict[str, Any],
     model_name: str,
     engine: StanResultEngine,
+    output_scope: StanOutputScope,
+    compress_values_with_errors: bool,
     context: Annotated[Context, TaskiqDepends()],
 ) -> Optional[str]:
     model_cache_dir = Path(__file__).parent / "model_cache"
@@ -56,5 +58,8 @@ async def compute_model(
         )
     assert isinstance(result, InferenceResult)
     # print(messages)
-    print(result)
-    return "42"
+    out = result.get_serializable_version(
+        output_scope=output_scope,
+        compress_values_with_errors=compress_values_with_errors,
+    )
+    return out

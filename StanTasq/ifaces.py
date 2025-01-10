@@ -5,12 +5,12 @@ from abc import ABC, abstractmethod
 from datetime import timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import humanize
 import numpy as np
 import prettytable
-from ValueWithError import IValueWithError
+from ValueWithError import ValueWithError
 
 
 class StanErrorType(Enum):
@@ -102,7 +102,7 @@ class StanOutputScope(Enum):
 class IInferenceResult(ABC):
     @property
     @abstractmethod
-    async def one_dim_parameters_count(self) -> int: ...
+    def one_dim_parameters_count(self) -> int: ...
 
     async def get_onedim_parameter_names(
         self, user_parameter_name: str
@@ -112,39 +112,40 @@ class IInferenceResult(ABC):
     @abstractmethod
     def user_parameters(self) -> list[str]: ...
 
+    @abstractmethod
+    def user_parameter_count(self) -> int: ...
+
     @property
     @abstractmethod
     def onedim_parameters(self) -> list[str]: ...
 
     @abstractmethod
-    def get_parameter_shape(self, user_parameter_name: str) -> tuple[int, ...]: ...
+    def get_parameter_shape(self, par_name: str) -> list[int]: ...
 
     @abstractmethod
-    async def sample_count(
-        self, onedim_parameter_name: str = None
-    ) -> float | int | None: ...
+    def sample_count(self, onedim_parameter_name: str = None) -> float | int | None: ...
 
     @abstractmethod
-    async def draws(self, incl_raw: bool = True) -> np.ndarray | None: ...
+    def draws(self, incl_raw: bool = True) -> np.ndarray | None: ...
 
     @abstractmethod
-    async def get_parameter_estimate(
-        self, onedim_parameter_name: str, store_values: bool = False
-    ) -> IValueWithError: ...
+    def get_parameter_estimate(
+        self, par_name: str, idx: list[int]
+    ) -> ValueWithError: ...
 
     @abstractmethod
-    async def get_parameter_mu(self, user_parameter_name: str) -> np.ndarray: ...
+    def get_parameter_mu(self, par_name: str) -> np.ndarray: ...
 
     @abstractmethod
-    async def get_parameter_sigma(self, user_parameter_name: str) -> np.ndarray: ...
+    def get_parameter_sigma(self, user_par_name: str) -> np.ndarray: ...
 
     @abstractmethod
-    async def get_cov_matrix(
+    def get_cov_matrix(
         self, user_parameter_names: list[str] | str | None = None
-    ) -> tuple[np.ndarray, list[str]]: ...
+    ) -> Optional[tuple[np.ndarray, list[str]]]: ...
 
     @abstractmethod
-    async def all_main_effects(self) -> dict[str, IValueWithError]: ...
+    def all_main_effects(self) -> dict[str, ValueWithError]: ...
 
     async def pretty_cov_matrix(
         self, user_parameter_names: list[str] | str | None = None
@@ -286,13 +287,6 @@ class IInferenceResult(ABC):
         else:
             return f"Run taken: {humanize.precisedelta(self.runtime)}"
 
-    @abstractmethod
-    async def get_progress(self) -> tuple[str, list[float]]:
-        """Gets progress: each item in the list is a progress of a particular chain.
-        First tuple element is the description of the phase.
-        """
-        ...
-
     def __repr__(self):
         if self.sample_count is None:
             return self.repr_without_sampling_errors()
@@ -359,7 +353,7 @@ class ILocalInferenceResult(IInferenceResult):
     def result_scope(self) -> StanOutputScope: ...
 
     @abstractmethod
-    def serialize(self, output_scope: StanOutputScope) -> bytes: ...
+    def serialize(self, output_scope: StanOutputScope) -> IInferenceResult: ...
 
     @abstractmethod
     def serialize_to_file(self, output_scope: StanOutputScope) -> Path: ...
@@ -386,7 +380,7 @@ class ILocalInferenceResult(IInferenceResult):
     @abstractmethod
     def get_parameter_estimate(
         self, onedim_parameter_name: str, store_values: bool = False
-    ) -> IValueWithError: ...
+    ) -> ValueWithError: ...
 
     @abstractmethod
     def get_parameter_mu(self, user_parameter_name: str) -> np.ndarray: ...
@@ -574,7 +568,7 @@ class ILocalInferenceResult(IInferenceResult):
             return self.repr_with_sampling_errors()
 
     @abstractmethod
-    def all_main_effects(self) -> dict[str, IValueWithError]: ...
+    def all_main_effects(self) -> dict[str, ValueWithError]: ...
 
     @abstractmethod
     def get_cov_onedim_par(

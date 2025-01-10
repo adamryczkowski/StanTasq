@@ -1,4 +1,10 @@
-from StanTasq import StanTask, broker, StanResultEngine
+from StanTasq import (
+    StanTask,
+    broker,
+    StanResultEngine,
+    StanOutputScope,
+    StanResultMainEffects,
+)
 import asyncio
 import pytest
 
@@ -29,10 +35,16 @@ async def test_task():
         data={"arr": 1.0},
         model_name="test1",
         engine=StanResultEngine.LAPLACE,
+        output_scope=StanOutputScope.MainEffects,
+        compress_values_with_errors=True,
     )
     get_result = await get_task.wait_result(timeout=200)
     result = get_result.return_value
+    if result is None:
+        print(f"Error: {get_result.error}")
+    obj = StanResultMainEffects(**result)
     print(result)
+    print(obj)
     # stream = await broker.js.stream_info("stan_tasks")
 
 

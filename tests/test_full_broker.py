@@ -42,4 +42,4 @@ async def test_task_pull():
 
 if __name__ == "__main__":
     # asyncio.run(test_task())
-    asyncio.run(test_task_pull())
+    asyncio.run(test_task_pull(), debug=True)

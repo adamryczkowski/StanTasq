@@ -364,8 +364,9 @@ class CmdStanRunner(IStanRunner):
         now2 = datetime.now()
 
         messages = {"stdout": stdout.getvalue(), "stderr": stderr.getvalue()}
-        out = InferenceResult(ans, messages, runtime=now2 - now1)
-        return out
+        obj = InferenceResult(ans, messages, runtime=now2 - now1)
+        # out = obj.get_serializable_version(StanOutputScope.MainEffects)
+        return obj
 
     @overrides
     def variational_bayes(

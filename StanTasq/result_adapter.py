@@ -12,25 +12,34 @@ from pathlib import Path
 
 # import jsonpickle
 import numpy as np
-from ValueWithError import ValueWithError, ValueWithErrorVec
+from ValueWithError import ValueWithError, make_ValueWithError_from_vector
 from cmdstanpy import CmdStanLaplace, CmdStanVB, CmdStanMCMC, CmdStanPathfinder
 from cmdstanpy.cmdstan_args import CmdStanArgs
 from cmdstanpy.stanfit.vb import RunSet
 from overrides import overrides
+from pydantic import BaseModel
 
-from .utils import serialize_to_bytes
 from .ifaces import ILocalInferenceResult, StanResultEngine, StanOutputScope
+from .stan_result_classes import (
+    StanResultMainEffects,
+)  # , StanResultFull, StanResultMultiNormal
+
 
 # _fallback = json._default_encoder.default
 # json._default_encoder.default = lambda obj: getattr(obj.__class__, "to_json", _fallback)(obj)
 
 
-class InferenceResult(ILocalInferenceResult):
+class InferenceResult(BaseModel, ILocalInferenceResult):
     _result: CmdStanLaplace | CmdStanVB | CmdStanMCMC | CmdStanPathfinder | None
     _draws: np.ndarray | None
     _user2onedim: (
         dict[str, list[str]] | None
     )  # Translates user parameter names to one-dim parameter names
+
+    @property
+    @overrides
+    def user_parameter_count(self) -> int:
+        return len(self.user_parameters)
 
     def __init__(
         self,
@@ -214,13 +223,10 @@ class InferenceResult(ILocalInferenceResult):
         if self._result is None:
             raise ValueError("No result available")
         var_index = self._result.column_names.index(onedim_parameter_name)
-        if store_values:
-            ans = ValueWithErrorVec(self.draws(True)[:, var_index])
-        else:
-            ans = ValueWithError.CreateFromVector(
-                self.draws(True)[:, var_index],
-                N=self.sample_count(onedim_parameter_name),
-            )
+        ans = make_ValueWithError_from_vector(self.draws(True)[:, var_index])
+        if not store_values:
+            ans = ans.get_ValueWithError([0.9, 0.95, 0.99, 0.999])
+
         return ans
 
     @overrides
@@ -296,30 +302,41 @@ class InferenceResult(ILocalInferenceResult):
             return f"MCMC algorithm {self._result.metadata.cmdstan_config['algorithm']}, engine {self._result.metadata.cmdstan_config['engine']}"
 
     @overrides
-    def all_main_effects(self) -> dict[str, ValueWithError]:
+    def all_main_effects(
+        self, compress_values_with_errors: bool = False
+    ) -> dict[str, ValueWithError]:
         out = {}
         for par in self.onedim_parameters:
-            out[par] = self.get_parameter_estimate(par)
+            out[par] = self.get_parameter_estimate(
+                par, store_values=not compress_values_with_errors
+            )
         return out
 
-    @overrides
-    def serialize(self, output_scope: StanOutputScope) -> bytes:
-        if self._runtime is None:
-            total_seconds = -1
-        else:
-            total_seconds = self._runtime.total_seconds()
-        ans_dict = {"runtime": total_seconds, "messages": self._messages}
-        ans_dict["method_name"] = self.method_name
+    def get_serializable_version(
+        self, output_scope: StanOutputScope, compress_values_with_errors: bool = False
+    ) -> StanResultMainEffects:  # | StanResultFull | StanResultMultiNormal:
+        # if self._runtime is None:
+        #     total_seconds = -1
+        # else:
+        #     total_seconds = self._runtime.total_seconds()
+        # ans_dict = {"runtime": total_seconds, "messages": self._messages}
+        # ans_dict["method_name"] = self.method_name
+        ans_dict = {}
 
         if output_scope == output_scope.MainEffects:
-            ans = self.all_main_effects()
-            ans_dict["vars"] = {
-                key: {"value": ans[key].value, "SE": ans[key].SE, "N": ans[key].N}
-                for key in ans
-            }
-            ans_dict["sample_count"] = self.sample_count()
+            obj = StanResultMainEffects(
+                one_dim_pars=self.all_main_effects(
+                    compress_values_with_errors=compress_values_with_errors
+                ),
+                par_dimensions={
+                    name: list(self.get_parameter_shape(name))
+                    for name in self.user_parameters
+                },
+                method_name=self.result_type,
+                calculation_sample_count=self.sample_count(),
+            )
 
-            return serialize_to_bytes({"main_effects": ans_dict}, "pickle")
+            return obj
         if output_scope == output_scope.Covariances:
             means = {
                 key: np.mean(values)
@@ -332,12 +349,61 @@ class InferenceResult(ILocalInferenceResult):
             ans_dict["N"] = [self.sample_count(name) for name in one_dim_names]
             ans_dict["sample_count"] = self.sample_count()
 
-            return serialize_to_bytes({"covariances": ans_dict}, "pickle")
+            return {"covariances": ans_dict}
         if output_scope == StanOutputScope.FullSamples:
             ans_dict["draws"] = self.draws(False).tolist()
             ans_dict["names"] = self.onedim_parameters
 
-            return serialize_to_bytes({"draws": ans_dict}, "pickle")
+            return {"draws": ans_dict}
+        if output_scope == StanOutputScope.RawOutput:
+            pass
+            assert False
+
+    @overrides
+    def serialize(self, output_scope: StanOutputScope) -> InferenceResult:
+        # if self._runtime is None:
+        #     total_seconds = -1
+        # else:
+        #     total_seconds = self._runtime.total_seconds()
+        # ans_dict = {"runtime": total_seconds, "messages": self._messages}
+        # ans_dict["method_name"] = self.method_name
+
+        if output_scope == output_scope.MainEffects:
+            obj = StanResultMainEffects(
+                one_dim_pars=self.all_main_effects(),
+                par_dimensions={
+                    name: list(self.get_parameter_shape(name))
+                    for name in self.user_parameters
+                },
+                method_name=self.result_type,
+                calculation_sample_count=self.sample_count(),
+            )
+            # ans = self.all_main_effects()
+            # ans_dict["vars"] = {
+            #     key: {"value": ans[key].value, "SE": ans[key].SE, "N": ans[key].N}
+            #     for key in ans
+            # }
+            # ans_dict["sample_count"] = self.sample_count()
+            return obj
+            # return serialize_to_bytes({"main_effects": ans_dict}, "pickle")
+        if output_scope == output_scope.Covariances:
+            # means = {
+            #     key: np.mean(values)
+            #     for key, values in self._result.stan_variables().items()
+            # }
+            # cov_matrix, one_dim_names = self.get_cov_matrix()
+            # ans_dict["cov"] = cov_matrix.tolist()
+            # ans_dict["names"] = one_dim_names
+            # ans_dict["means"] = means
+            # ans_dict["N"] = [self.sample_count(name) for name in one_dim_names]
+            # ans_dict["sample_count"] = self.sample_count()
+
+            return None  # serialize_to_bytes({"covariances": ans_dict}, "pickle")
+        if output_scope == StanOutputScope.FullSamples:
+            # ans_dict["draws"] = self.draws(False).tolist()
+            # ans_dict["names"] = self.onedim_parameters
+
+            return None  # serialize_to_bytes({"draws": ans_dict}, "pickle")
         if output_scope == StanOutputScope.RawOutput:
             # TODO:
             assert False
@@ -434,7 +500,3 @@ class InferenceResult(ILocalInferenceResult):
     @overrides
     def runtime(self) -> timedelta | None:
         return self._runtime
-
-    @overrides
-    async def get_progress(self) -> tuple[str, list[float]]:
-        pass

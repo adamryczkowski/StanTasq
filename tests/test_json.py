@@ -47,8 +47,8 @@ def test1():
     # print(messages)
     print(result)
     print(result.serialize(output_scope=StanOutputScope.MainEffects))
-    print(result.serialize(output_scope=StanOutputScope.Covariances))
-    print(result.serialize(output_scope=StanOutputScope.FullSamples))
+    # print(result.serialize(output_scope=StanOutputScope.Covariances))
+    # print(result.serialize(output_scope=StanOutputScope.FullSamples))
     # print(result.serialize(output_scope=StanOutputScope.RawOutput))
 
 

@@ -7,6 +7,7 @@ from .utils import infer_param_shapes
 from .ifaces import StanOutputScope, StanResultEngine
 from .init import init
 from .StanTask import compute_model
+from .result_adapter import StanResultMainEffects
 
 __all__ = [
     "main",
@@ -20,4 +21,5 @@ __all__ = [
     "init",
     "all_tasks",
     "compute_model",
+    "StanResultMainEffects",
 ]
