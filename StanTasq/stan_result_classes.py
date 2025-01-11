@@ -79,7 +79,7 @@ class StanResultMainEffects(IInferenceResult, BaseModel):
         table = prettytable.PrettyTable()
         table.field_names = ["Parameter", "index", "mu", "sigma", "10%", "90%"]
         for par, dims in self.par_dimensions.items():
-            if len(dims) == 1 and dims[0] == 1:
+            if len(dims) == 1 and dims[0] == 1 or len(dims) == 0:
                 par_name = par
                 par_value = self.one_dim_pars[par_name]
                 ci = par_value.get_CI(0.8)
@@ -87,10 +87,10 @@ class StanResultMainEffects(IInferenceResult, BaseModel):
                     [
                         par_name,
                         "",
-                        str(par_value.estimateMean),
-                        str(par_value.estimateSE),
-                        str(ci.pretty_lower),
-                        str(ci.pretty_upper),
+                        repr(par_value.estimateMean()),
+                        repr(par_value.estimateSE()),
+                        repr(ci.pretty_lower),
+                        repr(ci.pretty_upper),
                     ]
                 )
             else:
