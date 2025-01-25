@@ -36,6 +36,16 @@ async def test_task():
         model_name="test1",
         engine=StanResultEngine.LAPLACE,
         output_scope=StanOutputScope.MainEffects,
+        compress_values_with_errors=False,
+        context=None,
+    )
+    print(repr(get_task))
+    get_task = await StanTask.compute_model(
+        model_code=model(),
+        data={"arr": 1.0},
+        model_name="test1",
+        engine=StanResultEngine.LAPLACE,
+        output_scope=StanOutputScope.MainEffects,
         compress_values_with_errors=True,
         context=None,
     )

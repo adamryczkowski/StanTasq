@@ -2,7 +2,7 @@ import math
 
 import numpy as np
 import prettytable
-from ValueWithError import ValueWithError
+from ValueWithError import ValueWithError, VectorOfValues
 from overrides import overrides
 from typing import Optional
 from pydantic import BaseModel
@@ -12,7 +12,7 @@ from .ifaces import IInferenceResult, StanResultEngine
 
 class StanResultMainEffects(IInferenceResult, BaseModel):
     one_dim_pars: dict[
-        str, ValueWithError
+        str, ValueWithError | VectorOfValues
     ]  # Parameter name in format "par" or "par[10][2][3]"
     par_dimensions: dict[
         str, list[int]
@@ -22,7 +22,7 @@ class StanResultMainEffects(IInferenceResult, BaseModel):
 
     def __init__(
         self,
-        one_dim_pars: dict[str, ValueWithError],
+        one_dim_pars: dict[str, ValueWithError | VectorOfValues],
         par_dimensions: dict[str, list[int]],
         method_name: StanResultEngine,
         calculation_sample_count: int,
@@ -87,8 +87,8 @@ class StanResultMainEffects(IInferenceResult, BaseModel):
                     [
                         par_name,
                         "",
-                        repr(par_value.estimateMean()),
-                        repr(par_value.estimateSE()),
+                        repr(par_value.meanEstimate),
+                        repr(par_value.SDEstimate),
                         repr(ci.pretty_lower),
                         repr(ci.pretty_upper),
                     ]
