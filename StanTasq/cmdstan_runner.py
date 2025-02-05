@@ -63,15 +63,19 @@ class CmdStanRunner(IStanRunner):
 
     _messages: dict[str, str]
 
+    _worker_tag: str
+
     def __init__(
         self,
         model_cache: Path,
+        worker_tag: str,
         number_of_cores: int = None,
         allow_optimizations_for_stanc: bool = True,
         stan_threads: bool = True,
         output_dir: Path = None,
         sig_figs: int = None,
     ):
+        self._worker_tag = worker_tag
         if isinstance(model_cache, str):
             model_cache = Path(model_cache)
         assert isinstance(model_cache, Path)
@@ -218,7 +222,8 @@ class CmdStanRunner(IStanRunner):
         self.messages.update(msg)
 
         with open(str(model_filename_tmp), "rb", buffering=0) as f:
-            model_hash = hashlib.file_digest(f, "sha256").hexdigest()
+            model_hash = hashlib.file_digest(f, "sha256").digest()
+            model_hash = int.from_bytes(model_hash, byteorder="big")
 
         if model_hash == self._last_model_hash:
             return
@@ -357,14 +362,21 @@ class CmdStanRunner(IStanRunner):
                     output_dir=self._output_dir.name,
                     sig_figs=self._other_opts.get("sig_figs", None),
                 )
-            except subprocess.CalledProcessError:
-                messages = {"stdout": stdout.getvalue(), "stderr": stderr.getvalue()}
-                return InferenceResult(None, messages)
+            except subprocess.CalledProcessError as e:
+                now2 = datetime.now()
+                messages = {
+                    "stdout": stdout.getvalue(),
+                    "stderr": stderr.getvalue(),
+                    "error": str(e),
+                }
+                return InferenceResult(None, messages, worker_tag=self._worker_tag)
 
         now2 = datetime.now()
 
         messages = {"stdout": stdout.getvalue(), "stderr": stderr.getvalue()}
-        obj = InferenceResult(ans, messages, runtime=now2 - now1)
+        obj = InferenceResult(
+            ans, messages, runtime=now2 - now1, worker_tag=self._worker_tag
+        )
         # out = obj.get_serializable_version(StanOutputScope.MainEffects)
         return obj
 
@@ -388,12 +400,21 @@ class CmdStanRunner(IStanRunner):
                     draws=output_samples,
                     **kwargs,
                 )
-            except Exception:
-                messages = {"stdout": stdout.getvalue(), "stderr": stderr.getvalue()}
-                return InferenceResult(None, messages)
+            except Exception as e:
+                now2 = datetime.now()
+                messages = {
+                    "stdout": stdout.getvalue(),
+                    "stderr": stderr.getvalue(),
+                    "error": str(e),
+                }
+                return InferenceResult(
+                    None, messages, worker_tag=self._worker_tag, runtime=now2 - now1
+                )
         now2 = datetime.now()
         messages = {"stdout": stdout.getvalue(), "stderr": stderr.getvalue()}
-        out = InferenceResult(ans, messages, runtime=now2 - now1)
+        out = InferenceResult(
+            ans, messages, runtime=now2 - now1, worker_tag=self._worker_tag
+        )
 
         return out
 
@@ -415,14 +436,21 @@ class CmdStanRunner(IStanRunner):
                     sig_figs=self._other_opts.get("sig_figs", None),
                     **kwargs,
                 )
-            except subprocess.CalledProcessError:
-                messages = {"stdout": stdout.getvalue(), "stderr": stderr.getvalue()}
-                return InferenceResult(None, messages)
+            except subprocess.CalledProcessError as e:
+                now2 = datetime.now()
+                messages = {
+                    "stdout": stdout.getvalue(),
+                    "stderr": stderr.getvalue(),
+                    "error": str(e),
+                }
+                return InferenceResult(None, messages, worker_tag=self._worker_tag)
 
         now2 = datetime.now()
 
         messages = {"stdout": stdout.getvalue(), "stderr": stderr.getvalue()}
-        out = InferenceResult(ans, messages, runtime=now2 - now1)
+        out = InferenceResult(
+            ans, messages, runtime=now2 - now1, worker_tag=self._worker_tag
+        )
         return out
 
     @overrides
@@ -445,13 +473,22 @@ class CmdStanRunner(IStanRunner):
                     draws=output_samples,
                     **kwargs,
                 )
-            except subprocess.CalledProcessError:
-                messages = {"stdout": stdout.getvalue(), "stderr": stderr.getvalue()}
-                return InferenceResult(None, messages)
+            except subprocess.CalledProcessError as e:
+                now2 = datetime.now()
+                messages = {
+                    "stdout": stdout.getvalue(),
+                    "stderr": stderr.getvalue(),
+                    "error": str(e),
+                }
+                return InferenceResult(
+                    None, messages, worker_tag=self._worker_tag, runtime=now2 - now1
+                )
 
         now2 = datetime.now()
         messages = {"stdout": stdout.getvalue(), "stderr": stderr.getvalue()}
-        out = InferenceResult(ans, messages, runtime=now2 - now1)
+        out = InferenceResult(
+            ans, messages, runtime=now2 - now1, worker_tag=self._worker_tag
+        )
         return out
 
     def optimize(
@@ -472,8 +509,14 @@ class CmdStanRunner(IStanRunner):
                     sig_figs=self._other_opts.get("sig_figs", None),
                     **kwargs,
                 )
-            except subprocess.CalledProcessError:
-                messages = {"stdout": stdout.getvalue(), "stderr": stderr.getvalue()}
+            except subprocess.CalledProcessError as e:
+                now2 = datetime.now()
+                messages = {
+                    "stdout": stdout.getvalue(),
+                    "stderr": stderr.getvalue(),
+                    "error": str(e),
+                    "runtime": now2 - now1,
+                }
                 return None, messages
 
         now2 = datetime.now()

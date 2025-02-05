@@ -1,12 +1,8 @@
 from StanTasq import (
     StanTask,
-    broker,
     StanResultEngine,
     StanOutputScope,
-    StanResultMainEffects,
 )
-import asyncio
-import pytest
 
 
 def model() -> str:
@@ -26,48 +22,52 @@ generated quantities {
 """
 
 
-@pytest.mark.asyncio
-async def test_task():
+def test_task():
     print(f"Task: {StanTask.compute_model}")
-    await broker.startup()
-    get_task = await StanTask.compute_model(
+    data = {"arr": 1.0}
+    get_task = StanTask.serial_compute_model(
         model_code=model(),
-        data={"arr": 1.0},
+        data=data,
+        model_name="test1",
+        engine=StanResultEngine.VB,
+        output_scope=StanOutputScope.MainEffects,
+        compress_values_with_errors=True,
+        worker_tag="local",
+        require_converged=False,
+    )
+    print(repr(get_task))
+    get_task = StanTask.serial_compute_model(
+        model_code=model(),
+        data=data,
         model_name="test1",
         engine=StanResultEngine.LAPLACE,
         output_scope=StanOutputScope.MainEffects,
         compress_values_with_errors=False,
-        context=None,
+        worker_tag="local",
     )
     print(repr(get_task))
-    get_task = await StanTask.compute_model(
+    get_task = StanTask.serial_compute_model(
         model_code=model(),
-        data={"arr": 1.0},
+        data=data,
         model_name="test1",
-        engine=StanResultEngine.LAPLACE,
+        engine=StanResultEngine.MCMC,
         output_scope=StanOutputScope.MainEffects,
         compress_values_with_errors=True,
-        context=None,
+        worker_tag="local",
     )
     print(repr(get_task))
-    get_task = await StanTask.compute_model.kiq(
+    get_task = StanTask.serial_compute_model(
         model_code=model(),
-        data={"arr": 1.0},
+        data=data,
         model_name="test1",
-        engine=StanResultEngine.LAPLACE,
+        engine=StanResultEngine.PATHFINDER,
         output_scope=StanOutputScope.MainEffects,
         compress_values_with_errors=True,
+        worker_tag="local",
     )
-    get_result = await get_task.wait_result(timeout=200)
-    result = get_result.return_value
-    if result is None:
-        print(f"Error: {get_result.error}")
-    obj = StanResultMainEffects(**result)
-    print(result)
-    print(obj)
-    # stream = await broker.js.stream_info("stan_tasks")
+    print(repr(get_task))
 
 
 if __name__ == "__main__":
     # asyncio.run(test_task())
-    asyncio.run(test_task())
+    test_task()

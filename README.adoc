@@ -63,9 +63,13 @@ Simply run the `tests/test_basic.py` defined in the project.
 
 == TODO:
 
-. Test reading the model from the model cache.
-. Make the stan a proper task, that can be scheduled.
+. Test error handling in every stage of the task:
+.. reading in the model,
+.. compiling the model,
+.. testing if data fits the model,
+.. running the model
 . Add functionality to search for the result in "AllTasks" based on the request cache.
 . Test `just test` recipe.
 . Implement serialization as the RAW scope.
 . Rename serialized model files to have a proper extension. Bin? Obj? Zip?
+. Consider code de-duplication between local test result and remote test result.

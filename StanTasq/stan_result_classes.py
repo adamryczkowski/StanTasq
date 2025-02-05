@@ -6,6 +6,7 @@ from ValueWithError import ValueWithError, VectorOfValues
 from overrides import overrides
 from typing import Optional
 from pydantic import BaseModel
+import datetime as dt
 
 from .ifaces import IInferenceResult, StanResultEngine
 
@@ -26,12 +27,18 @@ class StanResultMainEffects(IInferenceResult, BaseModel):
         par_dimensions: dict[str, list[int]],
         method_name: StanResultEngine,
         calculation_sample_count: int,
+        runtime: dt.timedelta,
+        messages: dict[str, str],
+        worker_tag: str,
     ):
         super().__init__(
             one_dim_pars=one_dim_pars,
             par_dimensions=par_dimensions,
             method_name=method_name,
             calculation_sample_count=calculation_sample_count,
+            runtime=runtime,
+            messages=messages,
+            worker_tag=worker_tag,
         )
 
     @property
@@ -62,6 +69,10 @@ class StanResultMainEffects(IInferenceResult, BaseModel):
         return None
 
     @overrides
+    def is_error(self) -> bool:
+        return "error" in self.messages
+
+    @overrides
     def all_main_effects(self) -> dict[str, ValueWithError]:
         return self.one_dim_pars
 
@@ -76,6 +87,11 @@ class StanResultMainEffects(IInferenceResult, BaseModel):
         # mu  7.751103 0.1113406 5.199004 1.3286256 14.03575
         # tau 6.806410 0.1785522 6.044944 0.9572097 14.48271
 
+        ans = f"{self.method_name} running for {self.formatted_runtime():}\n"
+
+        if self.is_error():
+            return ans + "ERROR: " + self.error_message()
+
         table = prettytable.PrettyTable()
         table.field_names = ["Parameter", "index", "mu", "sigma", "10%", "90%"]
         for par, dims in self.par_dimensions.items():
@@ -89,8 +105,8 @@ class StanResultMainEffects(IInferenceResult, BaseModel):
                         "",
                         repr(par_value.meanEstimate),
                         repr(par_value.SDEstimate),
-                        repr(ci.pretty_lower),
-                        repr(ci.pretty_upper),
+                        ci.pretty_lower,
+                        ci.pretty_upper,
                     ]
                 )
             else:
@@ -106,10 +122,10 @@ class StanResultMainEffects(IInferenceResult, BaseModel):
                         [
                             par,
                             idx_txt,
-                            str(par_value.estimateMean),
-                            str(par_value.estimateSE),
-                            str(ci.pretty_lower),
-                            str(ci.pretty_upper),
+                            repr(par_value.estimateMean),
+                            repr(par_value.estimateSE),
+                            ci.pretty_lower,
+                            ci.pretty_upper,
                         ]
                     )
                     par = ""
@@ -120,7 +136,7 @@ class StanResultMainEffects(IInferenceResult, BaseModel):
                             idx[j] = 0
                             idx[j - 1] += 1
 
-        return str(table)
+        return ans + str(table)
 
     @overrides
     def user_parameter_count(self) -> int:

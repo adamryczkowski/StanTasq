@@ -17,7 +17,6 @@ from cmdstanpy import CmdStanLaplace, CmdStanVB, CmdStanMCMC, CmdStanPathfinder
 from cmdstanpy.cmdstan_args import CmdStanArgs
 from cmdstanpy.stanfit.vb import RunSet
 from overrides import overrides
-from pydantic import BaseModel
 
 from .ifaces import ILocalInferenceResult, StanResultEngine, StanOutputScope
 from .stan_result_classes import (
@@ -29,7 +28,7 @@ from .stan_result_classes import (
 # json._default_encoder.default = lambda obj: getattr(obj.__class__, "to_json", _fallback)(obj)
 
 
-class InferenceResult(BaseModel, ILocalInferenceResult):
+class InferenceResult(ILocalInferenceResult):
     _result: CmdStanLaplace | CmdStanVB | CmdStanMCMC | CmdStanPathfinder | None
     _draws: np.ndarray | None
     _user2onedim: (
@@ -45,16 +44,17 @@ class InferenceResult(BaseModel, ILocalInferenceResult):
         self,
         result: CmdStanLaplace | CmdStanVB | CmdStanMCMC | CmdStanPathfinder | None,
         messages: dict[str, str],
+        worker_tag: str,
         runtime: timedelta = None,
     ) -> None:
-        super().__init__(messages=messages, runtime=runtime)
+        super().__init__(messages=messages, runtime=runtime, worker_tag=worker_tag)
         if result is not None:
             assert isinstance(
                 result, (CmdStanLaplace, CmdStanVB, CmdStanMCMC, CmdStanPathfinder)
             )
             assert isinstance(messages, dict)
 
-        assert result is not None
+        # assert result is not None
 
         self._result = result
         self._draws = None
@@ -127,8 +127,8 @@ class InferenceResult(BaseModel, ILocalInferenceResult):
     @property
     @overrides
     def user_parameters(self) -> list[str]:
-        if self._result is None:
-            raise ValueError("No result available")
+        if self.result_type == StanResultEngine.NONE:
+            return []
         elif self.result_type == StanResultEngine.LAPLACE:
             return list(self._result.metadata.stan_vars.keys())
         elif self.result_type == StanResultEngine.VB:
@@ -143,8 +143,8 @@ class InferenceResult(BaseModel, ILocalInferenceResult):
     @property
     @overrides
     def onedim_parameters(self) -> list[str]:
-        if self._result is None:
-            raise ValueError("No result available")
+        if self.result_type == StanResultEngine.NONE:
+            return []
         elif self.result_type == StanResultEngine.LAPLACE:
             return list(self._result.column_names[2:])
         elif self.result_type == StanResultEngine.VB:
@@ -158,8 +158,8 @@ class InferenceResult(BaseModel, ILocalInferenceResult):
 
     @overrides
     def get_parameter_shape(self, user_parameter_name: str) -> tuple[int, ...]:
-        if self._result is None:
-            raise ValueError("No result available")
+        if self.result_type == StanResultEngine.NONE:
+            return (0,)
         elif self.result_type == StanResultEngine.LAPLACE:
             return self._result.metadata.stan_vars[user_parameter_name].dimensions
         elif self.result_type == StanResultEngine.VB:
@@ -173,8 +173,8 @@ class InferenceResult(BaseModel, ILocalInferenceResult):
 
     @overrides
     def sample_count(self, onedim_parameter_name: str = None) -> float | int | None:
-        if self._result is None:
-            raise ValueError("No result available")
+        if self.result_type == StanResultEngine.NONE:
+            return 0
         elif self.result_type == StanResultEngine.LAPLACE:
             return self.draws(False).shape[0]
         elif self.result_type == StanResultEngine.VB:
@@ -193,8 +193,8 @@ class InferenceResult(BaseModel, ILocalInferenceResult):
     @overrides
     def draws(self, incl_raw: bool = True) -> np.ndarray:
         if self._draws is None:
-            if self._result is None:
-                raise ValueError("No result available")
+            if self.result_type == StanResultEngine.NONE:
+                return np.array([])
             elif self.result_type == StanResultEngine.LAPLACE:
                 self._draws = self._result.draws()
             elif self.result_type == StanResultEngine.VB:
@@ -203,8 +203,12 @@ class InferenceResult(BaseModel, ILocalInferenceResult):
                 self._draws = self._result.draws(concat_chains=True)
             elif self.result_type == StanResultEngine.PATHFINDER:
                 self._draws = self._result.draws()
+            else:
+                raise ValueError("Unknown result type")
 
         if not incl_raw:
+            if self.result_type == StanResultEngine.NONE:
+                return np.array([])
             if self.result_type == StanResultEngine.LAPLACE:
                 return self._draws[:, 2:]
             elif self.result_type == StanResultEngine.VB:
@@ -213,6 +217,8 @@ class InferenceResult(BaseModel, ILocalInferenceResult):
                 return self._draws[:, 7:]
             elif self.result_type == StanResultEngine.PATHFINDER:
                 return self._draws[:, 2:]
+            else:
+                raise ValueError("Unknown result type")
 
         return self._draws
 
@@ -231,8 +237,8 @@ class InferenceResult(BaseModel, ILocalInferenceResult):
 
     @overrides
     def get_parameter_mu(self, user_parameter_name: str) -> np.ndarray:
-        if self._result is None:
-            raise ValueError("No result available")
+        if self.result_type == StanResultEngine.NONE:
+            return np.array([])
         elif self.result_type == StanResultEngine.LAPLACE:
             return self._result.stan_variable(user_parameter_name)
         elif self.result_type == StanResultEngine.VB:
@@ -334,6 +340,9 @@ class InferenceResult(BaseModel, ILocalInferenceResult):
                 },
                 method_name=self.result_type,
                 calculation_sample_count=self.sample_count(),
+                runtime=self.runtime,
+                messages=self.messages,
+                worker_tag=self.worker_tag,
             )
 
             return obj
@@ -361,6 +370,9 @@ class InferenceResult(BaseModel, ILocalInferenceResult):
 
     @overrides
     def serialize(self, output_scope: StanOutputScope) -> InferenceResult:
+        if self.result_type == StanResultEngine.NONE:
+            return InferenceResult(None, self.messages, self.runtime)
+
         # if self._runtime is None:
         #     total_seconds = -1
         # else:
@@ -495,8 +507,3 @@ class InferenceResult(BaseModel, ILocalInferenceResult):
             zip_path.unlink()
 
         return output
-
-    @property
-    @overrides
-    def runtime(self) -> timedelta | None:
-        return self._runtime

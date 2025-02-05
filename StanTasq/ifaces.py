@@ -6,6 +6,7 @@ from datetime import timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
+from pydantic import BaseModel
 
 import humanize
 import numpy as np
@@ -99,7 +100,11 @@ class StanOutputScope(Enum):
         return self.value > other.value
 
 
-class IInferenceResult(ABC):
+class IInferenceResult(ABC, BaseModel):
+    runtime: timedelta | None
+    messages: dict[str, str] | None = None
+    worker_tag: str
+
     @property
     @abstractmethod
     def one_dim_parameters_count(self) -> int: ...
@@ -132,6 +137,15 @@ class IInferenceResult(ABC):
     def get_parameter_estimate(
         self, par_name: str, idx: list[int]
     ) -> ValueWithError: ...
+
+    @abstractmethod
+    def is_error(self) -> bool: ...
+
+    def error_message(self) -> str:
+        msg = ""
+        msg += self.messages.get("error", "")
+        msg += self.messages.get("stderr", "")
+        return msg
 
     @abstractmethod
     def get_parameter_mu(self, par_name: str) -> np.ndarray: ...
@@ -288,22 +302,24 @@ class IInferenceResult(ABC):
             return f"Run taken: {humanize.precisedelta(self.runtime)}"
 
     def __repr__(self):
+        ans = f"{self.method_name} running for {self.formatted_runtime():}\n"
+        if self.is_error():
+            return ans + self.error_message()
         if self.sample_count is None:
-            return self.repr_without_sampling_errors()
+            return ans + self.repr_without_sampling_errors()
         else:
-            return self.repr_with_sampling_errors()
+            return ans + self.repr_with_sampling_errors()
 
 
 class ILocalInferenceResult(IInferenceResult):
-    _runtime: timedelta | None
-    _messages: dict[str, str] | None = None
     _user2onedim: (
         dict[str, list[str]] | None
     )  # Translates user parameter names to one-dim parameter names
 
-    def __init__(self, messages: dict[str, str], runtime: timedelta | None):
-        self._runtime = runtime
-        self._messages = messages
+    def __init__(
+        self, messages: dict[str, str], runtime: timedelta | None, worker_tag: str
+    ):
+        super().__init__(messages=messages, runtime=runtime, worker_tag=worker_tag)
         self._user2onedim = None
 
     # This member function is to be treated as protected, only accessible by method of derived classes, and not by the user
@@ -556,10 +572,6 @@ class ILocalInferenceResult(IInferenceResult):
             return "Run time: not available"
         else:
             return f"Run taken: {humanize.precisedelta(self._runtime)}"
-
-    @property
-    @abstractmethod
-    def runtime(self) -> timedelta | None: ...
 
     def __repr__(self):
         if self.sample_count is None:
