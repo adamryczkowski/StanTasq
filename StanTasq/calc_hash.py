@@ -1,8 +1,54 @@
+from __future__ import annotations
 from typing import Any
 import numpy as np
+import base64
 import inspect
 import hashlib
 import struct
+from pydantic import BaseModel
+
+
+class EntityHash(BaseModel):
+    hash: int
+
+    @staticmethod
+    def FromHex(hexstr: str) -> EntityHash:
+        return EntityHash(hash=int(hexstr, 16))
+
+    @staticmethod
+    def FromBase64(base64str: str) -> EntityHash:
+        return EntityHash.FromBytes(data=base64.b64decode(base64str))
+
+    @staticmethod
+    def FromInt(value: int) -> EntityHash:
+        return EntityHash(hash=value)
+
+    @staticmethod
+    def FromHashlib(hashlib: hashlib) -> EntityHash:
+        return EntityHash.FromBytes(data=hashlib.digest())
+
+    @staticmethod
+    def FromBytes(data: bytes) -> EntityHash:
+        return EntityHash(hash=int.from_bytes(data, byteorder="big"))
+
+    @property
+    def as_hex(self) -> str:
+        return hex(self.hash)[2:]
+
+    @property
+    def as_base64(self) -> str:
+        return base64.b64encode(self.as_bytes).decode("utf-8")
+
+    @property
+    def as_int(self) -> int:
+        return self.hash
+
+    @property
+    def as_bytes(self) -> bytes:
+        return self.hash.to_bytes(32, byteorder="big")
+
+    def __str__(self) -> str:
+        return self.as_hex
 
 
 def calc_hash(value: Any) -> str:
