@@ -16,11 +16,13 @@ cmdstanpy = "^1.2.5"
 overrides = "^7.7.0"
 numpy = "^2.2.1"
 valuewitherror = {path = "/home/adam/Documents/praca/TrainerEngine/lib/ValueWithError"}#, version = "^2.4.0"}
+cachemanager = {path = "/home/adam/Documents/praca/TrainerEngine/lib/CacheManager"}#, version = "^2.4.0"}
 humanize = "^4.11.0"
 prettytable = "^3.12.0"
 tqdm = "^4.67.1"
 pytest-asyncio = "^0.25.1"
 pydantic = "^2.10.4"
+numpydantic = "^1.6.7"
 
 [poetry.group.dev.dependencies]
 pytest = "^8.3.4"

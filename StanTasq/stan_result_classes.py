@@ -8,7 +8,85 @@ from typing import Optional
 from pydantic import BaseModel
 import datetime as dt
 
-from .ifaces import IInferenceResult, StanResultEngine
+from .ifaces import IInferenceResult, StanResultEngine, StanErrorType
+
+
+class StanErroneousResult(IInferenceResult, BaseModel):
+    method_name: StanResultEngine
+    error_type: StanErrorType
+
+    def __init__(
+        self,
+        method_name: StanResultEngine,
+        error_type: StanErrorType,
+        runtime: dt.timedelta | None,
+        messages: dict[str, str],
+        worker_tag: str,
+    ):
+        super().__init__(
+            runtime=runtime,
+            messages=messages,
+            worker_tag=worker_tag,
+            method_name=method_name,
+            error_type=error_type,
+        )
+
+    @property
+    @overrides
+    def one_dim_parameters_count(self) -> int:
+        return -1
+
+    @property
+    @overrides
+    def user_parameters(self) -> list[str]:
+        return []
+
+    @overrides
+    def user_parameter_count(self) -> int:
+        return -1
+
+    @property
+    @overrides
+    def onedim_parameters(self) -> list[str]:
+        return []
+
+    @overrides
+    def get_parameter_shape(self, par_name: str) -> list[int]:
+        return []
+
+    @overrides
+    def sample_count(self, onedim_parameter_name: str = None) -> float | int | None:
+        return None
+
+    @overrides
+    def draws(self, incl_raw: bool = True) -> np.ndarray | None:
+        return None
+
+    @overrides
+    def get_parameter_estimate(self, par_name: str, idx: list[int]) -> ValueWithError:
+        raise NotImplementedError()
+
+    @overrides
+    def is_error(self) -> bool:
+        return True
+
+    @overrides
+    def get_parameter_mu(self, par_name: str) -> np.ndarray:
+        return np.ndarray(0)
+
+    @overrides
+    def get_parameter_sigma(self, user_par_name: str) -> np.ndarray:
+        return np.ndarray(0)
+
+    @overrides
+    def get_cov_matrix(
+        self, user_parameter_names: list[str] | str | None = None
+    ) -> Optional[tuple[np.ndarray, list[str]]]:
+        return None
+
+    @overrides
+    def all_main_effects(self) -> dict[str, ValueWithError]:
+        return {}
 
 
 class StanResultMainEffects(IInferenceResult, BaseModel):

@@ -63,6 +63,11 @@ Simply run the `tests/test_basic.py` defined in the project.
 
 == TODO:
 
+. Test serializable type that is a union of many: `Union[ResultError, ResultFullSamples, ResultCovariances, ResultMainEffects, ResultRawMCMC, ResultRawPathfinder, ResultRawVB, ResultRawLaplace]`. Use Multiple Pydantic Models with a Discriminated Union: https://blog.det.life/pydantic-for-experts-discriminated-unions-in-pydantic-v2-2d9ca965b22f
+. Implement types that hold results, for each type of StanResultEngine,  StanOutputScope and error type.
+.. If there is StanErrorType of SYNTAX_ERROR, COMPILE_ERROR or DATA_ERROR: the result will be of type ResultError.
+.. For StanOutputScope.RawOutput each element of StanResultEngine will have its own dedicated result type. Errors of type RUNTIME_ERROR will be stored in the object.
+.. For all other StanOutputScope types, the result will be one of: ResultFullSamples, ResultCovariances or ResultMainEffects. Errors of type RUNTIME_ERROR will be stored in the object.
 . Test error handling in every stage of the task:
 .. reading in the model,
 .. compiling the model,

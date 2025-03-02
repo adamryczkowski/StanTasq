@@ -18,7 +18,12 @@ from cmdstanpy.cmdstan_args import CmdStanArgs
 from cmdstanpy.stanfit.vb import RunSet
 from overrides import overrides
 
-from .ifaces import ILocalInferenceResult, StanResultEngine, StanOutputScope
+from .ifaces import (
+    ILocalInferenceResult,
+    StanResultEngine,
+    StanOutputScope,
+    IInferenceResult,
+)
 from .stan_result_classes import (
     StanResultMainEffects,
 )  # , StanResultFull, StanResultMultiNormal
@@ -320,7 +325,7 @@ class InferenceResult(ILocalInferenceResult):
 
     def get_serializable_version(
         self, output_scope: StanOutputScope, compress_values_with_errors: bool = False
-    ) -> StanResultMainEffects:  # | StanResultFull | StanResultMultiNormal:
+    ) -> IInferenceResult:  # | StanResultFull | StanResultMultiNormal:
         # if self._runtime is None:
         #     total_seconds = -1
         # else:
