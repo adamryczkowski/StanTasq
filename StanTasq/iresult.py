@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime as dt
 import math
 from abc import ABC, abstractmethod
+from math import prod
 from enum import Enum
 from typing import Optional, Iterator
 
@@ -61,6 +62,65 @@ class ParameterNames(BaseModel):
 
     def get_parameter_from_index(self, index: int) -> str:
         return self._flatindex_to_parameter_name[index]
+
+    @staticmethod
+    def FromFlatLabels(one_dim_names: list[str]) -> ParameterNames:
+        ans_dims: dict[str, tuple[int, ...]] = {}
+        ans_dict: dict[str, list[str]] = {}
+
+        def str2shape(s: str) -> tuple[int, ...]:
+            return tuple(map(int, s.split(",")))
+
+        def bigger_shape(s1: tuple[int, ...], s2: tuple[int, ...]) -> tuple[int, ...]:
+            return tuple(max(s1[i], s2[i]) for i in range(len(s1)))
+
+        old_base_name = ""
+        var_count = 0
+        name_list = []
+        shape = None
+        for one_dim_name in one_dim_names:
+            new_base_name = one_dim_name.split("[")[0]
+
+            if new_base_name != old_base_name:
+                if shape is not None:
+                    # Commits variable
+                    assert var_count == prod(shape)
+                    assert old_base_name not in ans_dims
+                    assert old_base_name not in ans_dict
+                    ans_dims[old_base_name] = shape
+                    ans_dict[old_base_name] = name_list
+                    shape = None
+
+                # Iteration restart
+                old_base_name = new_base_name
+                var_count = 1
+                name_list = [one_dim_name]
+
+            else:
+                var_count += 1
+                name_list.append(one_dim_name)
+
+            if "[" not in one_dim_name:
+                shape = (1,)
+            else:
+                name_coords = one_dim_name.split("[")[1][:-1]
+                coords = str2shape(name_coords)
+
+                if shape is None:
+                    shape = coords
+                else:
+                    shape = bigger_shape(shape, coords)
+
+        if shape is not None:
+            # Commits variable
+            assert var_count == prod(shape)
+            assert old_base_name not in ans_dims
+            assert old_base_name not in ans_dict
+            ans_dims[old_base_name] = shape
+            ans_dict[old_base_name] = name_list
+
+        ans = ParameterNames(parameter_shapes=ans_dims)
+        return ans
 
     def __init__(self, parameter_shapes: dict[str, tuple[int, ...]]):
         self.parameter_shapes = parameter_shapes

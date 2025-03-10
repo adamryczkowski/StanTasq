@@ -18,9 +18,9 @@ import numpy as np
 from overrides import overrides
 
 from .ifaces import StanErrorType, IStanRunner, ILocalInferenceResult, StanResultEngine
-from .result_adapter import InferenceResult
+from ._result_adapter import InferenceResult
 from .stan_result_classes import StanErroneousResult
-from .utils import (
+from ._utils import (
     find_model_in_cache,
     normalize_stan_model_by_file,
     get_compiled_model_hashes,

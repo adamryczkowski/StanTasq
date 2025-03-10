@@ -9,7 +9,7 @@ from taskiq.task import AsyncTaskiqTask
 from taskiq_nats.result_backend import NATSObjectStoreResultBackend
 from tqdm import tqdm
 
-from .broker import broker
+from ._broker import broker
 
 
 class TaskWrapper:

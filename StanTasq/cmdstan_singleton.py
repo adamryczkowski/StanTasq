@@ -1,21 +1,11 @@
-import io
-import subprocess
-from _datetime import datetime
-from contextlib import redirect_stdout, redirect_stderr
 from multiprocessing import cpu_count
 from pathlib import Path
 from subprocess import run
-from typing import Optional
 from entityhash import EntityHash
 from cachemanager import ObjectCache
 
 import cmdstanpy
 
-# import jsonpickle
-from overrides import overrides
-
-from .ifaces import ILocalInferenceResult
-from .result_adapter import InferenceResult
 
 # _fallback = json._default_encoder.default
 # json._default_encoder.default = lambda obj: getattr(obj.__class__, "to_json", _fallback)(obj)
@@ -119,32 +109,6 @@ class CmdStanSingleton:
         return self._worker_tag
 
     # @overrides
-    # def load_data_by_file(self, data_file: str | Path):
-    #     """Loads data from a structureal file. Right now, the supported format is only JSON."""
-    #     if isinstance(data_file, str):
-    #         data_file = Path(data_file)
-    #
-    #     assert isinstance(data_file, Path)
-    #     assert data_file.exists()
-    #     assert data_file.is_file()
-    #
-    #     if data_file.suffix == ".json":
-    #         json_data = data_file.read_text()
-    #         self._data = json.loads(json_data)
-    #     elif data_file.suffix == ".pkl":
-    #         import pickle
-    #
-    #         with data_file.open("rb") as f:
-    #             self._data = pickle.load(f)
-    #     else:
-    #         raise ValueError("Unknown data file type")
-    #
-    # @overrides
-    # def load_data_by_dict(self, data: dict[str, float | int | np.ndarray]):
-    #     assert isinstance(data, dict)
-    #     self._data = data
-
-    # @overrides
     # def sampling(
     #     self,
     #     num_chains: int,
@@ -208,151 +172,151 @@ class CmdStanSingleton:
     #     # out = obj.get_serializable_version(StanOutputScope.MainEffects)
     #     return obj
 
-    @overrides
-    def variational_bayes(
-        self, output_samples: int = 1000, **kwargs
-    ) -> ILocalInferenceResult:
-        assert self.is_model_compiled
-
-        stdout = io.StringIO()
-        stderr = io.StringIO()
-
-        now1 = datetime.now()
-
-        with redirect_stdout(stdout), redirect_stderr(stderr):
-            try:
-                ans = self._stan_model.variational(
-                    data=self._data,
-                    output_dir=self._output_dir.name,
-                    sig_figs=self._other_opts.get("sig_figs", None),
-                    draws=output_samples,
-                    **kwargs,
-                )
-            except Exception as e:
-                now2 = datetime.now()
-                messages = {
-                    "stdout": stdout.getvalue(),
-                    "stderr": stderr.getvalue(),
-                    "error": str(e),
-                }
-                return InferenceResult(
-                    None, messages, worker_tag=self._worker_tag, runtime=now2 - now1
-                )
-        now2 = datetime.now()
-        messages = {"stdout": stdout.getvalue(), "stderr": stderr.getvalue()}
-        out = InferenceResult(
-            ans, messages, runtime=now2 - now1, worker_tag=self._worker_tag
-        )
-
-        return out
-
-    @overrides
-    def pathfinder(self, output_samples: int = 1000, **kwargs) -> ILocalInferenceResult:
-        assert self.is_model_compiled
-
-        stdout = io.StringIO()
-        stderr = io.StringIO()
-
-        now1 = datetime.now()
-
-        with redirect_stdout(stdout), redirect_stderr(stderr):
-            try:
-                ans = self._stan_model.pathfinder(
-                    data=self._data,
-                    draws=output_samples,
-                    output_dir=self._output_dir.name,
-                    sig_figs=self._other_opts.get("sig_figs", None),
-                    **kwargs,
-                )
-            except subprocess.CalledProcessError as e:
-                now2 = datetime.now()
-                messages = {
-                    "stdout": stdout.getvalue(),
-                    "stderr": stderr.getvalue(),
-                    "error": str(e),
-                }
-                return InferenceResult(None, messages, worker_tag=self._worker_tag)
-
-        now2 = datetime.now()
-
-        messages = {"stdout": stdout.getvalue(), "stderr": stderr.getvalue()}
-        out = InferenceResult(
-            ans, messages, runtime=now2 - now1, worker_tag=self._worker_tag
-        )
-        return out
-
-    @overrides
-    def laplace_sample(
-        self, output_samples: int = 1000, **kwargs
-    ) -> ILocalInferenceResult:
-        assert self.is_model_compiled
-
-        stdout = io.StringIO()
-        stderr = io.StringIO()
-
-        now1 = datetime.now()
-
-        with redirect_stdout(stdout), redirect_stderr(stderr):
-            try:
-                ans = self._stan_model.laplace_sample(
-                    data=self._data,
-                    output_dir=self._output_dir.name,
-                    sig_figs=self._other_opts.get("sig_figs", None),
-                    draws=output_samples,
-                    **kwargs,
-                )
-            except subprocess.CalledProcessError as e:
-                now2 = datetime.now()
-                messages = {
-                    "stdout": stdout.getvalue(),
-                    "stderr": stderr.getvalue(),
-                    "error": str(e),
-                }
-                return InferenceResult(
-                    None, messages, worker_tag=self._worker_tag, runtime=now2 - now1
-                )
-
-        now2 = datetime.now()
-        messages = {"stdout": stdout.getvalue(), "stderr": stderr.getvalue()}
-        out = InferenceResult(
-            ans, messages, runtime=now2 - now1, worker_tag=self._worker_tag
-        )
-        return out
-
-    def optimize(
-        self, **kwargs
-    ) -> tuple[Optional[cmdstanpy.CmdStanMLE], dict[str, str]]:
-        assert self.is_model_compiled
-
-        stdout = io.StringIO()
-        stderr = io.StringIO()
-
-        now1 = datetime.now()
-
-        with redirect_stdout(stdout), redirect_stderr(stderr):
-            try:
-                ans = self._stan_model.optimize(
-                    data=self._data,
-                    output_dir=self._output_dir.name,
-                    sig_figs=self._other_opts.get("sig_figs", None),
-                    **kwargs,
-                )
-            except subprocess.CalledProcessError as e:
-                now2 = datetime.now()
-                messages = {
-                    "stdout": stdout.getvalue(),
-                    "stderr": stderr.getvalue(),
-                    "error": str(e),
-                    "runtime": now2 - now1,
-                }
-                return None, messages
-
-        now2 = datetime.now()
-        return ans, {
-            "stdout": stdout.getvalue(),
-            "stderr": stderr.getvalue(),
-            "runtime": now2 - now1,
-        }
+    # @overrides
+    # def variational_bayes(
+    #     self, output_samples: int = 1000, **kwargs
+    # ) -> ILocalInferenceResult:
+    #     assert self.is_model_compiled
+    #
+    #     stdout = io.StringIO()
+    #     stderr = io.StringIO()
+    #
+    #     now1 = datetime.now()
+    #
+    #     with redirect_stdout(stdout), redirect_stderr(stderr):
+    #         try:
+    #             ans = self._stan_model.variational(
+    #                 data=self._data,
+    #                 output_dir=self._output_dir.name,
+    #                 sig_figs=self._other_opts.get("sig_figs", None),
+    #                 draws=output_samples,
+    #                 **kwargs,
+    #             )
+    #         except Exception as e:
+    #             now2 = datetime.now()
+    #             messages = {
+    #                 "stdout": stdout.getvalue(),
+    #                 "stderr": stderr.getvalue(),
+    #                 "error": str(e),
+    #             }
+    #             return InferenceResult(
+    #                 None, messages, worker_tag=self._worker_tag, runtime=now2 - now1
+    #             )
+    #     now2 = datetime.now()
+    #     messages = {"stdout": stdout.getvalue(), "stderr": stderr.getvalue()}
+    #     out = InferenceResult(
+    #         ans, messages, runtime=now2 - now1, worker_tag=self._worker_tag
+    #     )
+    #
+    #     return out
+    #
+    # @overrides
+    # def pathfinder(self, output_samples: int = 1000, **kwargs) -> ILocalInferenceResult:
+    #     assert self.is_model_compiled
+    #
+    #     stdout = io.StringIO()
+    #     stderr = io.StringIO()
+    #
+    #     now1 = datetime.now()
+    #
+    #     with redirect_stdout(stdout), redirect_stderr(stderr):
+    #         try:
+    #             ans = self._stan_model.pathfinder(
+    #                 data=self._data,
+    #                 draws=output_samples,
+    #                 output_dir=self._output_dir.name,
+    #                 sig_figs=self._other_opts.get("sig_figs", None),
+    #                 **kwargs,
+    #             )
+    #         except subprocess.CalledProcessError as e:
+    #             now2 = datetime.now()
+    #             messages = {
+    #                 "stdout": stdout.getvalue(),
+    #                 "stderr": stderr.getvalue(),
+    #                 "error": str(e),
+    #             }
+    #             return InferenceResult(None, messages, worker_tag=self._worker_tag)
+    #
+    #     now2 = datetime.now()
+    #
+    #     messages = {"stdout": stdout.getvalue(), "stderr": stderr.getvalue()}
+    #     out = InferenceResult(
+    #         ans, messages, runtime=now2 - now1, worker_tag=self._worker_tag
+    #     )
+    #     return out
+    #
+    # @overrides
+    # def laplace_sample(
+    #     self, output_samples: int = 1000, **kwargs
+    # ) -> ILocalInferenceResult:
+    #     assert self.is_model_compiled
+    #
+    #     stdout = io.StringIO()
+    #     stderr = io.StringIO()
+    #
+    #     now1 = datetime.now()
+    #
+    #     with redirect_stdout(stdout), redirect_stderr(stderr):
+    #         try:
+    #             ans = self._stan_model.laplace_sample(
+    #                 data=self._data,
+    #                 output_dir=self._output_dir.name,
+    #                 sig_figs=self._other_opts.get("sig_figs", None),
+    #                 draws=output_samples,
+    #                 **kwargs,
+    #             )
+    #         except subprocess.CalledProcessError as e:
+    #             now2 = datetime.now()
+    #             messages = {
+    #                 "stdout": stdout.getvalue(),
+    #                 "stderr": stderr.getvalue(),
+    #                 "error": str(e),
+    #             }
+    #             return InferenceResult(
+    #                 None, messages, worker_tag=self._worker_tag, runtime=now2 - now1
+    #             )
+    #
+    #     now2 = datetime.now()
+    #     messages = {"stdout": stdout.getvalue(), "stderr": stderr.getvalue()}
+    #     out = InferenceResult(
+    #         ans, messages, runtime=now2 - now1, worker_tag=self._worker_tag
+    #     )
+    #     return out
+    #
+    # def optimize(
+    #     self, **kwargs
+    # ) -> tuple[Optional[cmdstanpy.CmdStanMLE], dict[str, str]]:
+    #     assert self.is_model_compiled
+    #
+    #     stdout = io.StringIO()
+    #     stderr = io.StringIO()
+    #
+    #     now1 = datetime.now()
+    #
+    #     with redirect_stdout(stdout), redirect_stderr(stderr):
+    #         try:
+    #             ans = self._stan_model.optimize(
+    #                 data=self._data,
+    #                 output_dir=self._output_dir.name,
+    #                 sig_figs=self._other_opts.get("sig_figs", None),
+    #                 **kwargs,
+    #             )
+    #         except subprocess.CalledProcessError as e:
+    #             now2 = datetime.now()
+    #             messages = {
+    #                 "stdout": stdout.getvalue(),
+    #                 "stderr": stderr.getvalue(),
+    #                 "error": str(e),
+    #                 "runtime": now2 - now1,
+    #             }
+    #             return None, messages
+    #
+    #     now2 = datetime.now()
+    #     return ans, {
+    #         "stdout": stdout.getvalue(),
+    #         "stderr": stderr.getvalue(),
+    #         "runtime": now2 - now1,
+    #     }
 
     @property
     def model_code(self) -> str | None:

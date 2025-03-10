@@ -1,6 +1,7 @@
-from .broker import broker
+from ._broker import broker
 from .MyTask import add_one
 import asyncio
+
 
 async def main() -> None:
     # Never forget to call startup in the beginning.

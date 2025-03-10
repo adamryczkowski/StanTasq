@@ -11,13 +11,15 @@ For the worker to work, it needs:
 
 To get the NATS server running, install it with
 
-```bash
+[source,bash]
+----
 curl -sf https://binaries.nats.dev/nats-io/nats-server/v2@latest | sh
-```
+----
 
 Put the following configuration into a file, e.g. `~/.config/nats/nats-config.conf`:
 
-```
+[source]
+----
 listen: 0.0.0.0:4222
 authorization: {
     token: "szakal"
@@ -32,15 +34,16 @@ jetstream {
     # 10GB
     max_file_store: 10737418240
 }
-```
+----
 
 Obviously, the token should be a little more secure.
 
 Then run the server with:
 
-```bash
+[source,bash]
+----
 nats-server --config ~/.config/nats/nats-config.conf
-```
+----
 
 == Taskiq broker
 
@@ -50,9 +53,10 @@ Then enter its environment (e.g. `poetry shell` or `. vevn/bin/activate`).
 
 Once there, a `taskiq` command will be available. To run a broker capable of running all the workers defined in the project, run:
 
-```bash
+[source,bash]
+----
 worker StanTasq:broker
-```
+----
 
 Broker will find the tasks, because each task is decorated with the `@broker` decorator, and loaded on project's startup in `__init__.py`.
 

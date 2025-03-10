@@ -4,6 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["Adam Ryczkowski <adam@statystyka.net>"]
 readme = "README.adoc"
+packages = [{ include = "StanTasq"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"

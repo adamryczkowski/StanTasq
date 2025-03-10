@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from .model import StanModel
 from ._cmdstan_runner import initialize
-from .utils import normalize_stan_model_by_file, normalize_stan_model_by_str
+from ._utils import normalize_stan_model_by_file, normalize_stan_model_by_str
 from pathlib import Path
 from typing import Optional
 from entityhash import calc_hash, EntityHash

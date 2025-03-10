@@ -1,4 +1,4 @@
-from .broker import broker
+from ._broker import broker
 from typing import Annotated
 from taskiq import Context, TaskiqDepends
 

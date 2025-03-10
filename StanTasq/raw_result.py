@@ -29,9 +29,10 @@ from .iresult import (
     ColumnsSelectorType,
     Covariances,
 )
+from CacheManager import I_ItemProducer
 
 
-class ResultRaw(ResultBase, I_ResultSamples):
+class ResultRaw(ResultBase, I_ResultSamples, I_ItemProducer):
     class_type: ResultClassType = Literal[ResultClassType.Raw]
     _result: CmdStanLaplace | CmdStanVB | CmdStanMCMC | CmdStanPathfinder
     _cached_draws: Optional[np.ndarray] = None
@@ -163,38 +164,6 @@ class ResultRaw(ResultBase, I_ResultSamples):
     def get_parameter_estimate_flat(self, flatindex: int) -> ValueWithError:
         estimate_vector = self.get_estimate_with_samples(flatindex)
         return estimate_vector.get_ValueWithError(CI_levels=[0.99, 0.95, 0.9, 0.8, 0.5])
-
-    # @overrides
-    # def get_draws(self, incl_raw: bool = True) -> np.ndarray:
-    #     if self._draws is None:
-    #         if self.result_type == StanResultEngine.NONE:
-    #             return np.array([])
-    #         elif self.result_type == StanResultEngine.LAPLACE:
-    #             self._draws = self._result.draws()
-    #         elif self.result_type == StanResultEngine.VB:
-    #             self._draws = self._result.variational_sample
-    #         elif self.result_type == StanResultEngine.MCMC:
-    #             self._draws = self._result.draws(concat_chains=True)
-    #         elif self.result_type == StanResultEngine.PATHFINDER:
-    #             self._draws = self._result.draws()
-    #         else:
-    #             raise ValueError("Unknown result type")
-    #
-    #     if not incl_raw:
-    #         if self.result_type == StanResultEngine.NONE:
-    #             return np.array([])
-    #         if self.result_type == StanResultEngine.LAPLACE:
-    #             return self._draws[:, 2:]
-    #         elif self.result_type == StanResultEngine.VB:
-    #             return self._draws[:, 3:]
-    #         elif self.result_type == StanResultEngine.MCMC:
-    #             return self._draws[:, 7:]
-    #         elif self.result_type == StanResultEngine.PATHFINDER:
-    #             return self._draws[:, 2:]
-    #         else:
-    #             raise ValueError("Unknown result type")
-    #
-    #     return self._draws
 
     @overrides
     def get_parameter_sigma(self, par_names: ColumnsSelectorType = None) -> np.ndarray:
