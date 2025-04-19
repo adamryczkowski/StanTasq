@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "StanTasq"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Adam Ryczkowski <adam@statystyka.net>"]
 readme = "README.adoc"
@@ -16,8 +16,8 @@ taskiq-nats = "^0.5.1"
 cmdstanpy = "^1.2.5"
 overrides = "^7.7.0"
 numpy = "^2.2.1"
-valuewitherror = {path = "/home/adam/Documents/praca/TrainerEngine/lib/ValueWithError"}#, version = "^2.4.0"}
-cachemanager = {path = "/home/adam/Documents/praca/TrainerEngine/lib/CacheManager"}#, version = "^2.4.0"}
+valuewitherror = {git = "https://github.com/adamryczkowski/ValueWithError.git"}
+cachemanager = {git = "https://github.com/adamryczkowski/CacheManager.git", rev = "master"}
 humanize = "^4.11.0"
 prettytable = "^3.12.0"
 tqdm = "^4.67.1"
